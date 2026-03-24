@@ -30,7 +30,6 @@ type App struct {
 	oauthServer      *oauth.Server
 	jwtOauthHandlers *oauth.Handlers
 	statusTemplate   *template.Template
-	docsManager      *DocsManager
 	logger           *slog.Logger
 	metrics          *metrics.Manager
 	rateLimiter      *web.RateLimiter
@@ -175,14 +174,7 @@ func (app *App) initializeServices() (*mcpsdk.Server, error) {
 		app.logger.Warn("Failed to initialize status template", "error", err)
 	}
 
-	// --- Docs Manager ---
-	docsManager, err := NewDocsManager(app.Version, mcp.GetToolNames())
-	if err != nil {
-		app.logger.Warn("Failed to initialize docs manager", "error", err)
-	} else {
-		app.docsManager = docsManager
-		app.logger.Info("Docs manager initialized")
-	}
+	app.logger.Info("Static docs site ready (moat-generated)")
 
 	// --- MCP Server & Tools ---
 	app.logger.Info("Creating MCP server and registering tools...")
@@ -227,15 +219,8 @@ func (app *App) setupMux() *http.ServeMux {
 		mux.HandleFunc("/admin/", app.metrics.AdminHTTPHandler())
 	}
 
-	// Docs routes (landing page, docs, static assets)
-	if app.docsManager != nil {
-		mux.HandleFunc("/", app.docsManager.ServeLanding)
-		mux.HandleFunc("/docs/", app.docsManager.ServeDocs)
-		mux.Handle("/static/", app.docsManager.ServeStatic())
-	} else {
-		// Fallback to status page if docs manager failed to initialize
-		mux.HandleFunc("/", app.serveStatusPage)
-	}
+	// Docs routes (moat-generated static site)
+	mux.Handle("/", NewDocsHandler())
 
 	// OAuth endpoints (JWT-based)
 	mux.HandleFunc("/callback", app.jwtOauthHandlers.HandleCallback)

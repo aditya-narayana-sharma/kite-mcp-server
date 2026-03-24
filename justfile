@@ -20,8 +20,12 @@ default:
 
 # === Build Commands ===
 
-# Build the project with git-derived version
-build: _build-with-git-version
+# Generate docs and build the project with git-derived version
+build: generate _build-with-git-version
+
+# Run go generate (builds moat docs)
+generate:
+    go generate ./app/
 
 # Build with specific version
 build-version VERSION: (_build-with-version VERSION)

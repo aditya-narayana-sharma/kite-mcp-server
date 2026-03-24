@@ -62,7 +62,9 @@ build/
 dist/
 target/
 
-# Documentation build artifacts
+# Documentation build artifacts (moat output)
+app/docs-site/*
+!app/docs-site/.gitkeep
 
 # Local data files
 instruments.json
