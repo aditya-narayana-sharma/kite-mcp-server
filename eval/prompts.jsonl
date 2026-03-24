@@ -1,0 +1,28 @@
+{"prompt": "Show my profile details", "expected_tool": "portfolio", "expected_mode": "profile"}
+{"prompt": "How much margin do I have available?", "expected_tool": "portfolio", "expected_mode": "margins"}
+{"prompt": "What are my current holdings?", "expected_tool": "portfolio", "expected_mode": "holdings"}
+{"prompt": "Show my open positions", "expected_tool": "portfolio", "expected_mode": "positions"}
+{"prompt": "What is the current price of Infosys?", "expected_tool": "market", "expected_mode": "ltp"}
+{"prompt": "Get a full quote for SBIN including market depth", "expected_tool": "market", "expected_mode": "quote"}
+{"prompt": "Show today's OHLC for Reliance", "expected_tool": "market", "expected_mode": "ohlc"}
+{"prompt": "Get daily candles for INFY for the last 3 months", "expected_tool": "market", "expected_mode": "historical"}
+{"prompt": "Search for Nifty 50 ETFs", "expected_tool": "market", "expected_mode": "search"}
+{"prompt": "Find the instrument token for NSE:INFY", "expected_tool": "market", "expected_mode": "search"}
+{"prompt": "Show all my orders today", "expected_tool": "orders", "expected_mode": "list"}
+{"prompt": "What trades were executed today?", "expected_tool": "orders", "expected_mode": "all_trades"}
+{"prompt": "Buy 10 shares of Infosys at market price", "expected_tool": "orders", "expected_mode": "place"}
+{"prompt": "Place a limit order to sell 50 SBIN at 820", "expected_tool": "orders", "expected_mode": "place"}
+{"prompt": "Cancel my order 12345", "expected_tool": "orders", "expected_mode": "cancel"}
+{"prompt": "Show the status history for order 67890", "expected_tool": "orders", "expected_mode": "history"}
+{"prompt": "What fills did order 12345 get?", "expected_tool": "orders", "expected_mode": "trades"}
+{"prompt": "Show my GTT orders", "expected_tool": "gtt", "expected_mode": "list"}
+{"prompt": "Set up a GTT: if TCS drops below 3500, buy 5 shares at 3490", "expected_tool": "gtt", "expected_mode": "place"}
+{"prompt": "Delete GTT trigger 123", "expected_tool": "gtt", "expected_mode": "delete"}
+{"prompt": "Show all my price alerts", "expected_tool": "alerts", "expected_mode": "get"}
+{"prompt": "Create an alert when INFY crosses 1800", "expected_tool": "alerts", "expected_mode": "create"}
+{"prompt": "Show my mutual fund holdings", "expected_tool": "mutual_funds", "expected_mode": "holdings"}
+{"prompt": "What's my portfolio worth? Show all holdings with P&L", "expected_tool": "portfolio", "expected_mode": "holdings"}
+{"prompt": "Compare prices of HDFC Bank, ICICI Bank and Kotak Bank", "expected_tool": "market", "expected_mode": "ltp"}
+{"prompt": "Modify my order 12345 to change the price to 500", "expected_tool": "orders", "expected_mode": "modify"}
+{"prompt": "What F&O contracts are available for RELIANCE?", "expected_tool": "market", "expected_mode": "search"}
+{"prompt": "Set a stop loss: if INFY falls below 1400, sell 10 shares", "expected_tool": "gtt", "expected_mode": "place"}
