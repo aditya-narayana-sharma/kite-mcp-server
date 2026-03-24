@@ -329,6 +329,11 @@ func (s *Server) generateAccessToken(kiteUserID, sessionID string) (string, erro
 	return token.SignedString(s.config.JWTSecret)
 }
 
+// GenerateTestToken creates a JWT token for testing purposes.
+func (s *Server) GenerateTestToken(kiteUserID, sessionID string) (string, error) {
+	return s.generateAccessToken(kiteUserID, sessionID)
+}
+
 // --- Token Validation ---
 
 // ValidateToken validates a JWT access token and returns the claims

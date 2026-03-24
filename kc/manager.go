@@ -23,6 +23,7 @@ type Config struct {
 	Logger      *slog.Logger
 	Metrics     *metrics.Manager
 	Instruments *instruments.Manager
+	KiteBaseURI string // Override Kite Connect API base URL (for testing)
 }
 
 // New creates a new kc Manager with the given configuration
@@ -43,6 +44,7 @@ func New(cfg Config) (*Manager, error) {
 	m := &Manager{
 		apiKey:      cfg.APIKey,
 		apiSecret:   cfg.APISecret,
+		kiteBaseURI: cfg.KiteBaseURI,
 		Logger:      cfg.Logger,
 		metrics:     cfg.Metrics,
 		Instruments: cfg.Instruments,
@@ -75,6 +77,7 @@ const (
 type Manager struct {
 	apiKey         string
 	apiSecret      string
+	kiteBaseURI    string // Override for Kite Connect API base URL (testing)
 	Logger         *slog.Logger
 	metrics        *metrics.Manager
 	templates      map[string]*template.Template
@@ -137,6 +140,9 @@ func (m *Manager) GetAuthenticatedClient(sessionID string) (*kiteconnect.Client,
 	client := kiteconnect.New(m.apiKey)
 	client.SetAppName("kite-mcp")
 	client.SetAccessToken(session.Credentials.AccessToken)
+	if m.kiteBaseURI != "" {
+		client.SetBaseURI(m.kiteBaseURI)
+	}
 	return client, nil
 }
 
