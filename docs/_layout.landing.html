@@ -1,0 +1,47 @@
+{{ define "title" }}{{ .SiteName }} — Connect AI to Your Zerodha Account{{ end }}
+
+{{ define "head" }}
+<style>
+  /* Hide sidebar on landing page, full-width content */
+  [data-sidebar] { display: none !important; }
+  [data-sidebar-toggle] { display: none !important; }
+  [data-sidebar-layout] { grid-template-columns: 1fr !important; }
+
+  .hero { text-align: center; padding: var(--space-12) var(--space-4) var(--space-8); max-width: 640px; margin: 0 auto; }
+  .hero h1 { margin-bottom: var(--space-3); }
+  .hero .tagline { font-size: var(--text-5); color: var(--muted-foreground); margin-bottom: var(--space-6); line-height: 1.7; }
+  .hero .cta { display: flex; gap: var(--space-3); justify-content: center; margin-bottom: var(--space-8); }
+  .clients-section { text-align: center; padding: var(--space-8) var(--space-4); max-width: 640px; margin: 0 auto; }
+  .clients-section h2 { margin-bottom: var(--space-4); }
+  .client-links { display: flex; justify-content: center; gap: var(--space-8); }
+  .footer { text-align: center; }
+</style>
+{{ end }}
+
+{{ define "content" }}
+<section class="hero">
+  <h1>Connect AI assistants to your Zerodha account</h1>
+  <p class="tagline">
+    Model Context Protocol server for Kite Connect API. Use Claude, Cursor, or any MCP-compatible AI to manage your portfolio.
+  </p>
+  <div class="cta">
+    <a href="{{ .BasePath }}/guide/getting-started/" class="button">Get started</a>
+    <a href="{{ .BasePath }}/reference/examples/" class="button outline">See examples</a>
+  </div>
+</section>
+
+<section class="clients-section">
+  <h2>Works with your AI tools</h2>
+  <p class="text-light mb-4">
+    Claude Desktop, Claude Code, Cursor, VS Code, Windsurf, Cline, JetBrains, and any MCP-compatible client.
+  </p>
+  <div class="client-links">
+    <a href="{{ .BasePath }}/clients/claude-desktop/">Claude Desktop</a>
+    <a href="{{ .BasePath }}/clients/claude-code/">Claude Code</a>
+    <a href="{{ .BasePath }}/clients/cursor/">Cursor</a>
+    <a href="{{ .BasePath }}/clients/vscode/">VS Code</a>
+    <a href="{{ .BasePath }}/clients/windsurf/">Windsurf</a>
+    <a href="{{ .BasePath }}/clients/other/">More</a>
+  </div>
+</section>
+{{ end }}

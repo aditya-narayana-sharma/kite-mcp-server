@@ -1,0 +1,66 @@
+/* Zerodha oat theme extension
+   Overrides oat CSS variables to match zerodha.com brand.
+   See https://oat.ink/customizing/ */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
+
+:root {
+  /* Zerodha Kite blue */
+  --primary: #387ed1;
+  --primary-foreground: #ffffff;
+
+  /* zerodha.com uses #424242 body text, #1a1a1a headings */
+  --foreground: #424242;
+  --card-foreground: #424242;
+
+  /* Clean white backgrounds */
+  --background: #ffffff;
+  --card: #ffffff;
+  --muted: #fafafa;
+  --muted-foreground: #999999;
+  --faint: #fafafa;
+  --faint-foreground: #999999;
+
+  /* Flat, minimal accents */
+  --accent: #f4f4f5;
+  --accent-foreground: #424242;
+  --secondary: #f4f4f5;
+  --secondary-foreground: #424242;
+
+  /* Borders - zerodha uses subtle #e0e0e0 */
+  --border: #e0e0e0;
+  --input: #e0e0e0;
+
+  /* Focus ring matches primary */
+  --ring: #387ed1;
+
+  /* Inter font - same as zerodha.com */
+  --font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+/* Fix GitHub icon alignment in topnav links */
+[data-topnav] a {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35em;
+}
+
+[data-theme="dark"] {
+  --primary: #5a9ae6;
+  --primary-foreground: #ffffff;
+  --foreground: #e0e0e0;
+  --card-foreground: #e0e0e0;
+  --background: #1a1a1a;
+  --card: #242424;
+  --muted: #242424;
+  --muted-foreground: #808080;
+  --faint: #1e1e1e;
+  --faint-foreground: #808080;
+  --accent: #2a2a2a;
+  --accent-foreground: #e0e0e0;
+  --secondary: #2a2a2a;
+  --secondary-foreground: #e0e0e0;
+  --border: #333333;
+  --input: #333333;
+  --ring: #5a9ae6;
+}

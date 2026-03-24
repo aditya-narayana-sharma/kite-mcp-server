@@ -1,0 +1,14 @@
+site_name = "Kite MCP"
+logo = "_static/zerodha-logo.svg"
+
+[highlight]
+light = "github"
+dark = "github-dark"
+
+[[topnav]]
+title = "GitHub"
+url = "https://github.com/zerodha/kite-mcp-server"
+icon = "github"
+
+[extra]
+footer = '&copy; <a href="https://zerodha.com">Zerodha</a>'
