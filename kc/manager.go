@@ -127,11 +127,11 @@ func (m *Manager) GetAuthenticatedClient(sessionID string) (*kiteconnect.Client,
 	}
 
 	if session.Credentials == nil {
-		return nil, errors.New("not logged into Kite. Please use the login tool")
+		return nil, errors.New("not logged into Kite. Please authenticate via the OAuth flow")
 	}
 
 	if time.Now().After(session.Credentials.ExpiresAt) {
-		return nil, errors.New("kite session has expired (24-hour limit). Please use the login tool to refresh")
+		return nil, errors.New("kite session has expired. Please re-authenticate via the OAuth flow")
 	}
 
 	client := kiteconnect.New(m.apiKey)

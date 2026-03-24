@@ -39,14 +39,12 @@ type App struct {
 type StatusPageData struct {
 	Title   string
 	Version string
-	Mode    string
 }
 
 // Config holds the application configuration
 type Config struct {
 	KiteAPIKey      string
 	KiteAPISecret   string
-	AppMode         string
 	AppPort         string
 	AppHost         string
 	ExcludedTools   string
@@ -55,16 +53,9 @@ type Config struct {
 	OAuthIssuer     string
 }
 
-// Server mode constants
 const (
-	ModeSSE    = "sse"
-	ModeStdIO  = "stdio"
-	ModeHTTP   = "http"
-	ModeHybrid = "hybrid"
-
-	DefaultPort    = "8080"
-	DefaultHost    = "localhost"
-	DefaultAppMode = "http"
+	DefaultPort = "8080"
+	DefaultHost = "localhost"
 )
 
 func NewApp(logger *slog.Logger) *App {
@@ -72,7 +63,6 @@ func NewApp(logger *slog.Logger) *App {
 		Config: &Config{
 			KiteAPIKey:      os.Getenv("KITE_API_KEY"),
 			KiteAPISecret:   os.Getenv("KITE_API_SECRET"),
-			AppMode:         os.Getenv("APP_MODE"),
 			AppPort:         os.Getenv("APP_PORT"),
 			AppHost:         os.Getenv("APP_HOST"),
 			ExcludedTools:   os.Getenv("EXCLUDED_TOOLS"),
@@ -91,9 +81,6 @@ func (app *App) SetVersion(version string) {
 }
 
 func (app *App) LoadConfig() error {
-	if app.Config.AppMode == "" {
-		app.Config.AppMode = DefaultAppMode
-	}
 	if app.Config.AppPort == "" {
 		app.Config.AppPort = DefaultPort
 	}
@@ -239,81 +226,19 @@ func (app *App) serveHTTPServer(srv *http.Server) {
 }
 
 func (app *App) startServer(srv *http.Server, mcpServer *mcpsdk.Server, url string) error {
-	switch app.Config.AppMode {
-	default:
-		return fmt.Errorf("invalid APP_MODE: %s", app.Config.AppMode)
-	case ModeHybrid:
-		app.startHybridServerMode(srv, mcpServer, url)
-	case ModeHTTP:
-		app.startHTTPServerMode(srv, mcpServer)
-	case ModeSSE:
-		app.startSSEServerMode(srv, mcpServer, url)
-	case ModeStdIO:
-		app.startStdIOServer(srv, mcpServer)
-	}
+	app.logger.Info("Starting MCP server", "url", "http://"+srv.Addr+"/mcp")
+	streamable := mcpsdk.NewStreamableHTTPHandler(
+		func(r *http.Request) *mcpsdk.Server { return mcpServer },
+		&mcpsdk.StreamableHTTPOptions{
+			Logger:         app.logger,
+			SessionTimeout: 30 * time.Minute,
+		},
+	)
+	mux := app.setupMux()
+	mux.Handle("/mcp", app.oauthServer.Middleware(http.HandlerFunc(streamable.ServeHTTP)))
+	srv.Handler = mux
+	app.serveHTTPServer(srv)
 	return nil
-}
-
-func (app *App) startHTTPServerMode(srv *http.Server, mcpServer *mcpsdk.Server) {
-	app.logger.Info("Starting HTTP MCP server", "url", "http://"+srv.Addr+"/mcp")
-	streamable := mcpsdk.NewStreamableHTTPHandler(
-		func(r *http.Request) *mcpsdk.Server { return mcpServer },
-		&mcpsdk.StreamableHTTPOptions{
-			Logger:         app.logger,
-			SessionTimeout: 30 * time.Minute,
-		},
-	)
-	mux := app.setupMux()
-	mux.Handle("/mcp", app.oauthServer.Middleware(http.HandlerFunc(streamable.ServeHTTP)))
-	srv.Handler = mux
-	app.serveHTTPServer(srv)
-}
-
-func (app *App) startSSEServerMode(srv *http.Server, mcpServer *mcpsdk.Server, url string) {
-	app.logger.Info("Starting SSE MCP server", "url", "http://"+url+"/sse")
-	sseHandler := mcpsdk.NewSSEHandler(
-		func(r *http.Request) *mcpsdk.Server { return mcpServer },
-		nil,
-	)
-	mux := app.setupMux()
-	mux.HandleFunc("/sse", sseHandler.ServeHTTP)
-	mux.HandleFunc("/message", sseHandler.ServeHTTP)
-	srv.Handler = mux
-	app.serveHTTPServer(srv)
-}
-
-func (app *App) startHybridServerMode(srv *http.Server, mcpServer *mcpsdk.Server, url string) {
-	app.logger.Info("Starting Hybrid MCP server", "url", "http://"+url)
-	sseHandler := mcpsdk.NewSSEHandler(
-		func(r *http.Request) *mcpsdk.Server { return mcpServer },
-		nil,
-	)
-	streamable := mcpsdk.NewStreamableHTTPHandler(
-		func(r *http.Request) *mcpsdk.Server { return mcpServer },
-		&mcpsdk.StreamableHTTPOptions{
-			Logger:         app.logger,
-			SessionTimeout: 30 * time.Minute,
-		},
-	)
-	mux := app.setupMux()
-
-	mux.HandleFunc("/sse", sseHandler.ServeHTTP)
-	mux.HandleFunc("/message", sseHandler.ServeHTTP)
-	mux.Handle("/mcp", app.oauthServer.Middleware(http.HandlerFunc(streamable.ServeHTTP)))
-
-	srv.Handler = mux
-	app.serveHTTPServer(srv)
-}
-
-func (app *App) startStdIOServer(srv *http.Server, mcpServer *mcpsdk.Server) {
-	app.logger.Info("Starting STDIO MCP server...")
-	mux := app.setupMux()
-	srv.Handler = mux
-	go app.serveHTTPServer(srv)
-	// Run the server on stdio transport
-	if err := mcpServer.Run(context.Background(), &mcpsdk.StdioTransport{}); err != nil {
-		app.logger.Error("STDIO server error", "error", err)
-	}
 }
 
 func (app *App) initStatusPageTemplate() error {
@@ -326,7 +251,7 @@ func (app *App) initStatusPageTemplate() error {
 }
 
 func (app *App) getStatusData() StatusPageData {
-	return StatusPageData{Title: "Status", Version: app.Version, Mode: app.Config.AppMode}
+	return StatusPageData{Title: "Status", Version: app.Version}
 }
 
 func (app *App) serveStatusPage(w http.ResponseWriter, r *http.Request) {

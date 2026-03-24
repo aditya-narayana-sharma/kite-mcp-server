@@ -187,7 +187,7 @@ func TestToolExclusion(t *testing.T) {
 		assert.Len(t, filtered, len(allTools))
 
 		// Exclude some tools
-		excludedSet := map[string]bool{"place_order": true, "modify_order": true}
+		excludedSet := map[string]bool{"orders": true, "gtt": true}
 		filtered, registered, excluded = filterTools(allTools, excludedSet)
 		assert.Equal(t, len(allTools)-2, registered)
 		assert.Equal(t, 2, excluded)
@@ -198,13 +198,13 @@ func TestToolExclusion(t *testing.T) {
 		for _, tool := range filtered {
 			filteredNames[tool.Definition().Name] = true
 		}
-		assert.False(t, filteredNames["place_order"])
-		assert.False(t, filteredNames["modify_order"])
+		assert.False(t, filteredNames["orders"])
+		assert.False(t, filteredNames["gtt"])
 	})
 
 	t.Run("GetAllTools integrity", func(t *testing.T) {
 		allTools := GetAllTools()
-		assert.Greater(t, len(allTools), 20)
+		assert.Equal(t, 6, len(allTools))
 
 		// Check for duplicates and essential tools
 		toolNames := make(map[string]bool)
@@ -217,7 +217,7 @@ func TestToolExclusion(t *testing.T) {
 		}
 
 		// Verify essential tools exist
-		essential := []string{"login", "get_profile", "place_order", "get_quotes"}
+		essential := []string{"portfolio", "orders", "gtt", "market", "alerts", "mutual_funds"}
 		for _, toolName := range essential {
 			assert.True(t, toolNames[toolName], "Essential tool missing: %s", toolName)
 		}

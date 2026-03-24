@@ -5,167 +5,104 @@ description: Complete reference for all MCP tools and their parameters
 
 # Tools
 
-Kite MCP exposes 23 tools. The AI assistant selects the appropriate tool based on the user's request. This page documents each tool and its parameters.
+Kite MCP exposes 6 tools. Each tool handles a group of related operations via a `mode` parameter. The AI assistant selects the appropriate tool and mode based on the user's request.
 
-## Authentication
+## portfolio
 
-### login
+Retrieve portfolio and account information.
 
-Initiates the OAuth login flow. Returns a Kite login URL for the user to authenticate. If the user is already logged in, returns a confirmation with the username.
+| Mode | Description |
+|------|-------------|
+| `profile` | User profile: name, email, user ID, broker, account type, enabled products and exchanges |
+| `margins` | Available funds and margins across equity and commodity segments |
+| `holdings` | Demat holdings with P&L. Supports `type` (full/summary/compact) and pagination |
+| `positions` | Open intraday and overnight positions. Supports pagination |
 
-No parameters.
+**Parameters:**
 
-## Account
+| Parameter | Type | Modes | Description |
+|-----------|------|-------|-------------|
+| `mode` | string | all | **Required.** Operation mode |
+| `type` | string | holdings | Holdings data type: `full` (default), `summary`, `compact` |
+| `from` | number | holdings, positions | Pagination start index (0-based, default: 0) |
+| `limit` | number | holdings, positions | Maximum items to return. Enables pagination metadata in response |
 
-### get_profile
+---
 
-Returns user profile information including name, email, user ID, broker, and account type.
+## orders
 
-No parameters.
+Manage orders placed during the current trading day.
 
-### get_margins
+| Mode | Description |
+|------|-------------|
+| `list` | All orders today (completed, cancelled, rejected). Supports pagination |
+| `history` | Status trail for a specific order showing every state transition |
+| `trades` | Fills (executions) for a specific order |
+| `all_trades` | All trades across all orders today. Supports pagination |
+| `place` | Place a new order on the exchange |
+| `modify` | Modify an existing open order |
+| `cancel` | Cancel an open order |
 
-Returns available margins and funds across equity and commodity segments.
+**Parameters:**
 
-No parameters.
+| Parameter | Type | Modes | Description |
+|-----------|------|-------|-------------|
+| `mode` | string | all | **Required.** Operation mode |
+| `order_id` | string | history, trades, modify, cancel | Order ID |
+| `variety` | string | place, modify, cancel | Order variety: `regular` (default), `co`, `amo`, `iceberg`, `auction` |
+| `exchange` | string | place | Exchange: `NSE` (default), `BSE`, `MCX`, `NFO`, `BFO` |
+| `tradingsymbol` | string | place | Trading symbol (e.g. `INFY`, `NIFTY2560118000CE`) |
+| `transaction_type` | string | place | `BUY` or `SELL` |
+| `quantity` | number | place | Number of shares or lots (default: 1) |
+| `product` | string | place | `CNC` (delivery), `MIS` (intraday), `NRML` (F&O overnight), `MTF` (margin funding) |
+| `order_type` | string | place, modify | `MARKET`, `LIMIT`, `SL` (stop-loss limit), `SL-M` (stop-loss market) |
+| `price` | number | place, modify | Limit price. Required for `LIMIT` and `SL` orders |
+| `trigger_price` | number | place, modify | Trigger price. Required for `SL` and `SL-M` orders |
+| `validity` | string | place, modify | `DAY`, `IOC` (immediate or cancel), `TTL` (time-to-live) |
+| `validity_ttl` | number | place | Life span in minutes. Required when validity is `TTL` |
+| `disclosed_quantity` | number | place, modify | Quantity disclosed to the market |
+| `iceberg_legs` | number | place | Number of legs for iceberg orders |
+| `iceberg_quantity` | number | place | Quantity per leg for iceberg orders |
+| `tag` | string | place | Optional alphanumeric label (max 20 characters) |
+| `market_protection` | number | place | Market protection % for MARKET/SL-M. `0`=disabled, `1`-`100`=custom, `-1`=auto |
+| `from` | number | list, all_trades | Pagination start index (0-based) |
+| `limit` | number | list, all_trades | Maximum items to return |
 
-### get_holdings
+---
 
-Returns portfolio holdings from the user's demat account.
+## gtt
 
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `type` | string | `full` | `full` returns detailed holdings with pagination. `summary` returns aggregated data. `compact` returns minimal fields with pagination. |
-| `from` | number | 0 | Starting index for pagination (0-based). Applies to `full` and `compact` types. |
-| `limit` | number | - | Maximum number of holdings to return. When specified, the response includes pagination metadata. Applies to `full` and `compact` types. |
+Manage GTT (Good Till Triggered) orders. GTT orders persist across trading sessions and execute automatically when a price condition is met.
 
-### get_positions
+| Mode | Description |
+|------|-------------|
+| `list` | All GTT orders. Supports pagination |
+| `place` | Create a new single-leg or two-leg OCO (one-cancels-other) GTT |
+| `modify` | Update an existing GTT |
+| `delete` | Remove a GTT |
 
-Returns open intraday and overnight positions for the current day.
+**Parameters:**
 
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `from` | number | 0 | Starting index for pagination (0-based) |
-| `limit` | number | - | Maximum number of positions to return |
+| Parameter | Type | Modes | Description |
+|-----------|------|-------|-------------|
+| `mode` | string | all | **Required.** Operation mode |
+| `trigger_id` | number | modify, delete | GTT trigger ID |
+| `exchange` | string | place, modify | Exchange: `NSE` (default), `BSE`, `MCX`, `NFO`, `BFO` |
+| `tradingsymbol` | string | place, modify | Trading symbol |
+| `last_price` | number | place, modify | Current price of the instrument |
+| `transaction_type` | string | place, modify | `BUY` or `SELL` |
+| `product` | string | place | `CNC`, `NRML`, `MIS`, `MTF` |
+| `trigger_type` | string | place, modify | `single` or `two-leg` |
 
-## Orders
-
-### get_orders
-
-Returns all orders placed during the current trading day, including completed, cancelled, and rejected orders.
-
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `from` | number | 0 | Starting index for pagination (0-based) |
-| `limit` | number | - | Maximum number of orders to return |
-
-### get_order_history
-
-Returns the complete status trail for a specific order, showing every state transition from placement to completion.
-
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `order_id` | string | yes | The order ID to look up |
-
-### get_order_trades
-
-Returns trades (fills) that resulted from a specific order.
-
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `order_id` | string | yes | The order ID |
-
-### get_trades
-
-Returns all trades executed during the current trading day across all orders.
-
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `from` | number | 0 | Starting index for pagination (0-based) |
-| `limit` | number | - | Maximum number of trades to return |
-
-### place_order
-
-Places a new order on the exchange.
-
-| Parameter | Type | Required | Default | Description |
-|-----------|------|----------|---------|-------------|
-| `variety` | string | yes | `regular` | Order variety: `regular`, `co`, `amo`, `iceberg`, `auction` |
-| `exchange` | string | yes | `NSE` | Exchange: `NSE`, `BSE`, `MCX`, `NFO`, `BFO` |
-| `tradingsymbol` | string | yes | - | Trading symbol (e.g. `INFY`, `NIFTY2560118000CE`) |
-| `transaction_type` | string | yes | - | `BUY` or `SELL` |
-| `quantity` | number | yes | 1 | Number of shares or lots |
-| `product` | string | yes | - | Product type: `CNC` (delivery), `MIS` (intraday), `NRML` (F&O overnight), `MTF` (margin funding) |
-| `order_type` | string | yes | - | `MARKET`, `LIMIT`, `SL` (stop-loss limit), `SL-M` (stop-loss market) |
-| `price` | number | no | - | Limit price. Required for `LIMIT` and `SL` orders. |
-| `trigger_price` | number | no | - | Trigger price. Required for `SL` and `SL-M` orders. |
-| `validity` | string | no | `DAY` | `DAY`, `IOC` (immediate or cancel), `TTL` (time-to-live in minutes) |
-| `validity_ttl` | number | no | - | Order life span in minutes. Required when `validity` is `TTL`. |
-| `disclosed_quantity` | number | no | - | Quantity disclosed to the market |
-| `iceberg_legs` | number | no | - | Number of legs for iceberg orders |
-| `iceberg_quantity` | number | no | - | Quantity per leg for iceberg orders |
-| `tag` | string | no | - | Optional alphanumeric label for the order (max 20 characters) |
-| `market_protection` | number | no | - | Market protection percentage for MARKET and SL-M orders. `0` disables, `1`-`100` sets a custom percentage, `-1` enables auto protection. |
-
-### modify_order
-
-Modifies an existing open order.
-
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `variety` | string | yes | Order variety |
-| `order_id` | string | yes | The order to modify |
-| `order_type` | string | yes | New order type: `MARKET`, `LIMIT`, `SL`, `SL-M` |
-| `quantity` | number | no | New quantity |
-| `price` | number | no | New limit price |
-| `trigger_price` | number | no | New trigger price |
-| `validity` | string | no | New validity |
-| `disclosed_quantity` | number | no | New disclosed quantity |
-
-### cancel_order
-
-Cancels an open order.
-
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `variety` | string | yes | Order variety: `regular`, `co`, `amo`, `iceberg`, `auction` |
-| `order_id` | string | yes | The order to cancel |
-
-## GTT (Good Till Triggered)
-
-GTT orders persist across trading sessions and execute automatically when a price condition is met.
-
-### get_gtts
-
-Returns all GTT orders.
-
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `from` | number | 0 | Starting index for pagination (0-based) |
-| `limit` | number | - | Maximum number of GTT orders to return |
-
-### place_gtt_order
-
-Creates a new GTT order. Supports single-leg triggers and two-leg OCO (one-cancels-other) triggers.
-
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `exchange` | string | yes | `NSE`, `BSE`, `MCX`, `NFO`, `BFO` |
-| `tradingsymbol` | string | yes | Trading symbol |
-| `last_price` | number | yes | Current price of the instrument |
-| `transaction_type` | string | yes | `BUY` or `SELL` |
-| `product` | string | yes | `CNC`, `NRML`, `MIS`, `MTF` |
-| `trigger_type` | string | yes | `single` or `two-leg` |
-
-**Single-leg parameters:**
+**Single-leg parameters** (when trigger_type=single):
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `trigger_value` | number | Price at which the order is triggered |
+| `trigger_value` | number | Price at which the order triggers |
 | `quantity` | number | Order quantity |
 | `limit_price` | number | Limit price for the resulting order |
 
-**Two-leg (OCO) parameters:**
+**Two-leg (OCO) parameters** (when trigger_type=two-leg):
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
@@ -176,120 +113,105 @@ Creates a new GTT order. Supports single-leg triggers and two-leg OCO (one-cance
 | `lower_quantity` | number | Quantity for the lower leg |
 | `lower_limit_price` | number | Limit price for the lower leg |
 
-### modify_gtt_order
+| `from` | number | list | Pagination start index |
+| `limit` | number | list | Maximum items to return |
 
-Modifies an existing GTT order. Accepts the same parameters as `place_gtt_order` plus `trigger_id`.
+---
 
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `trigger_id` | number | yes | ID of the GTT order to modify |
+## market
 
-All other parameters from `place_gtt_order` are accepted.
+Retrieve market data and search instruments.
 
-### delete_gtt_order
+| Mode | Description |
+|------|-------------|
+| `quote` | Full market data snapshot: OHLC, volume, bid/ask depth, OI. Up to 500 instruments |
+| `ltp` | Last traded price only (lighter than quote) |
+| `ohlc` | Today's open, high, low, close |
+| `historical` | Historical OHLC candle data for a single instrument |
+| `search` | Search the instrument master list across all exchanges |
 
-Deletes a GTT order.
+**Common parameters:**
 
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `trigger_id` | number | yes | ID of the GTT order to delete |
+| Parameter | Type | Modes | Description |
+|-----------|------|-------|-------------|
+| `mode` | string | all | **Required.** Operation mode |
+| `instruments` | string[] | quote, ltp, ohlc | List in `exchange:tradingsymbol` format, e.g. `["NSE:INFY"]` |
 
-## Market Data
+**Historical parameters** (mode=historical):
 
-### get_quotes
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `instrument_token` | number | Numeric instrument token. Use search mode to find this |
+| `interval` | string | `minute`, `3minute`, `5minute`, `10minute`, `15minute`, `30minute`, `60minute`, `day` |
+| `from_date` | string | Start date: `YYYY-MM-DD HH:MM:SS` |
+| `to_date` | string | End date: `YYYY-MM-DD HH:MM:SS` |
+| `continuous` | boolean | Stitch futures into continuous series (default: false) |
+| `oi` | boolean | Include open interest (default: false) |
 
-Returns the complete market data snapshot for up to 500 instruments, including OHLC, volume, bid/ask market depth, and open interest.
-
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `instruments` | string[] | yes | List of instruments in `exchange:tradingsymbol` format (e.g. `["NSE:INFY", "NSE:SBIN"]`) |
-
-### get_ltp
-
-Returns the last traded price for a list of instruments.
-
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `instruments` | string[] | yes | List of instruments in `exchange:tradingsymbol` format |
-
-### get_ohlc
-
-Returns open, high, low, close prices for the current trading day.
-
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `instruments` | string[] | yes | List of instruments in `exchange:tradingsymbol` format |
-
-### get_historical_data
-
-Returns historical OHLC candle data for an instrument.
-
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `instrument_token` | number | yes | Numeric instrument token (use `search_instruments` to find this) |
-| `interval` | string | yes | Candle interval: `minute`, `3minute`, `5minute`, `10minute`, `15minute`, `30minute`, `60minute`, `day` |
-| `from_date` | string | yes | Start date in `YYYY-MM-DD HH:MM:SS` format |
-| `to_date` | string | yes | End date in `YYYY-MM-DD HH:MM:SS` format |
-| `continuous` | boolean | no | Stitch futures contracts into a continuous series |
-| `oi` | boolean | no | Include open interest data |
-
-### search_instruments
-
-Searches the instrument master list across all exchanges. Supports multiple lookup modes.
+**Search parameters** (mode=search):
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `mode` | string | `search` | Lookup mode: `search`, `get_by_id`, `get_by_tradingsymbol`, `get_by_isin`, `get_by_inst_token`, `get_by_exch_token` |
-| `verbosity` | string | `compact` | `compact` returns essential fields. `full` returns all instrument details. |
-| `query` | string | - | Search text. Required for `search` mode. |
-| `filter_on` | string | `id` | Field to search on: `id` (exchange:tradingsymbol), `name`, `isin`, `tradingsymbol`, `underlying` |
-| `id` | string | - | Instrument ID in `EXCHANGE:TRADINGSYMBOL` format. Required for `get_by_id` mode. |
-| `exchange` | string | - | Exchange code. Required for `get_by_tradingsymbol` and `get_by_exch_token` modes. |
-| `tradingsymbol` | string | - | Trading symbol. Required for `get_by_tradingsymbol` mode. |
-| `isin` | string | - | ISIN code. Required for `get_by_isin` mode. |
-| `inst_token` | number | - | Instrument token. Required for `get_by_inst_token` mode. |
-| `exch_token` | number | - | Exchange token. Required for `get_by_exch_token` mode. |
+| `search_mode` | string | `search` | `search`, `get_by_id`, `get_by_tradingsymbol`, `get_by_isin`, `get_by_inst_token`, `get_by_exch_token` |
+| `verbosity` | string | `compact` | `compact` returns essential fields. `full` returns all details |
+| `query` | string | - | Search text. Required for search_mode=search |
+| `filter_on` | string | `id` | Field to search: `id`, `name`, `isin`, `tradingsymbol`, `underlying` |
+| `id` | string | - | `EXCHANGE:TRADINGSYMBOL`. For search_mode=get_by_id |
+| `exchange` | string | - | Exchange code. For get_by_tradingsymbol, get_by_exch_token |
+| `tradingsymbol` | string | - | Trading symbol. For get_by_tradingsymbol |
+| `isin` | string | - | ISIN. For get_by_isin |
+| `inst_token` | number | - | Instrument token. For get_by_inst_token |
+| `exch_token` | number | - | Exchange token. For get_by_exch_token |
+| `from` | number | 0 | Pagination start index |
+| `limit` | number | - | Maximum items to return |
 
-## Alerts
+---
 
-### alerts
+## alerts
 
-Manages Kite price alerts. Supports creating, modifying, deleting, and retrieving alerts.
+Manage Kite price alerts. Alerts trigger when a price condition is met.
 
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `mode` | string | yes | Operation: `get`, `create`, `modify`, `delete` |
-| `uuids` | string[] | yes | Alert UUIDs. Pass an empty array for `get` mode to retrieve all alerts. Single UUID for `modify`. One or more for `delete`. |
+| Mode | Description |
+|------|-------------|
+| `get` | Retrieve alerts. Pass UUIDs for specific alerts, or an empty array for all |
+| `create` | Create a new alert (simple or ATO) |
+| `modify` | Update an existing alert |
+| `delete` | Delete one or more alerts |
 
-**Additional parameters for `get` mode:**
+**Parameters:**
 
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `status` | string | Filter by status: `enabled`, `disabled`, `deleted` |
-| `type` | string | Filter by type: `simple`, `ato` |
-| `history` | boolean | Include alert trigger history (default: `false`) |
+| Parameter | Type | Modes | Description |
+|-----------|------|-------|-------------|
+| `mode` | string | all | **Required.** Operation mode |
+| `uuids` | string[] | all | **Required.** Alert UUIDs. Empty array for get-all. Single UUID for modify. One or more for delete |
+| `status` | string | get | Filter: `enabled`, `disabled`, `deleted` |
+| `type` | string | get | Filter: `simple`, `ato` |
+| `history` | boolean | get | Include trigger history (default: false) |
+| `name` | string | create, modify | Alert name |
+| `alert_type` | string | create, modify | `simple` or `ato` (alert to order) |
+| `lhs_exchange` | string | create, modify | Exchange for the monitored instrument |
+| `lhs_tradingsymbol` | string | create, modify | Trading symbol for the monitored instrument |
+| `lhs_attribute` | string | create, modify | Attribute to monitor (e.g. `LastTradedPrice`) |
+| `operator` | string | create, modify | `<=`, `>=`, `<`, `>`, `==` |
+| `rhs_type` | string | create, modify | `constant` (fixed value) or `instrument` (another instrument's attribute) |
+| `rhs_constant` | number | create, modify | Target value. Required when rhs_type=constant |
+| `rhs_exchange` | string | create, modify | RHS exchange. Required when rhs_type=instrument |
+| `rhs_tradingsymbol` | string | create, modify | RHS trading symbol. Required when rhs_type=instrument |
+| `rhs_attribute` | string | create, modify | RHS attribute. Required when rhs_type=instrument |
+| `basket` | string | create, modify | JSON basket configuration for ATO alerts |
 
-**Additional parameters for `create` and `modify` modes:**
+---
 
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `name` | string | Alert name |
-| `alert_type` | string | `simple` or `ato` (alert to order) |
-| `lhs_exchange` | string | Exchange for the left-hand side instrument |
-| `lhs_tradingsymbol` | string | Trading symbol for the left-hand side |
-| `lhs_attribute` | string | Attribute to monitor (e.g. `LastTradedPrice`) |
-| `operator` | string | Comparison operator: `<=`, `>=`, `<`, `>`, `==` |
-| `rhs_type` | string | Right-hand side type: `constant` (fixed value) or `instrument` (another instrument's attribute) |
-| `rhs_constant` | number | Target value. Required when `rhs_type` is `constant`. |
-| `rhs_exchange` | string | Exchange for the RHS instrument. Required when `rhs_type` is `instrument`. |
-| `rhs_tradingsymbol` | string | Trading symbol for the RHS instrument. Required when `rhs_type` is `instrument`. |
-| `rhs_attribute` | string | Attribute for the RHS instrument. Required when `rhs_type` is `instrument`. |
-| `basket` | string | JSON string with basket configuration for ATO alerts |
+## mutual_funds
 
-## Mutual Funds
+Retrieve mutual fund data from Coin.
 
-### get_mf_holdings
+| Mode | Description |
+|------|-------------|
+| `holdings` | All mutual fund holdings |
 
-Returns mutual fund holdings via Coin.
+**Parameters:**
 
-No parameters.
+| Parameter | Type | Modes | Description |
+|-----------|------|-------|-------------|
+| `mode` | string | all | **Required.** Operation mode |

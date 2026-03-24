@@ -36,38 +36,12 @@ func GetToolNames() []string {
 // GetAllTools returns all available tools for registration
 func GetAllTools() []Tool {
 	return []Tool{
-		// Tools for setting up the client
-		&LoginTool{},
-
-		// Tools that get data from Kite Connect
-		&ProfileTool{},
-		&MarginsTool{},
-		&HoldingsTool{},
-		&PositionsTool{},
-		&TradesTool{},
+		&PortfolioTool{},
 		&OrdersTool{},
-		&OrderHistoryTool{},
-		&OrderTradesTool{},
-		&GTTOrdersTool{},
-		&MFHoldingsTool{},
-
-		// Tools for market data
-		&QuotesTool{},
-		&InstrumentsSearchTool{},
-		&HistoricalDataTool{},
-		&LTPTool{},
-		&OHLCTool{},
-
-		// Tools for alerts management
+		&GTTTool{},
+		&MarketTool{},
 		&AlertsTool{},
-
-		// Tools that post data to Kite Connect
-		&PlaceOrderTool{},
-		&ModifyOrderTool{},
-		&CancelOrderTool{},
-		&PlaceGTTOrderTool{},
-		&ModifyGTTOrderTool{},
-		&DeleteGTTOrderTool{},
+		&MutualFundsTool{},
 	}
 }
 

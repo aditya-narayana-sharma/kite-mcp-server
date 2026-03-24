@@ -122,10 +122,6 @@ func TestLoadConfig_Defaults(t *testing.T) {
 	}
 
 	// Verify defaults
-	if app.Config.AppMode != DefaultAppMode {
-		t.Errorf("Expected default app mode '%s', got '%s'", DefaultAppMode, app.Config.AppMode)
-	}
-
 	if app.Config.AppPort != DefaultPort {
 		t.Errorf("Expected default port '%s', got '%s'", DefaultPort, app.Config.AppPort)
 	}
@@ -141,24 +137,7 @@ func TestLoadConfig_Defaults(t *testing.T) {
 	}
 }
 
-func TestStartServer_InvalidMode(t *testing.T) {
-	app := &App{
-		Config: &Config{
-			AppMode: "invalid_mode",
-		},
-	}
 
-	err := app.startServer(nil, nil, "")
-
-	if err == nil {
-		t.Error("Expected error for invalid APP_MODE")
-	}
-
-	expectedMsg := "invalid APP_MODE: invalid_mode"
-	if err.Error() != expectedMsg {
-		t.Errorf("Expected error message '%s', got '%s'", expectedMsg, err.Error())
-	}
-}
 
 func TestNewApp(t *testing.T) {
 	app := NewApp(testLogger())
