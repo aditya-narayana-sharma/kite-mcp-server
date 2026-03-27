@@ -30,12 +30,16 @@ import (
 type Config struct {
 	// Issuer is the OAuth issuer URL (e.g., "https://mcp.kite.trade")
 	Issuer string
-	// JWTSecret is the secret for signing JWTs (should be 32+ bytes)
+	// JWTSecret is the secret for signing JWTs (must be 32+ bytes)
 	JWTSecret []byte
 	// TokenTTL is how long access tokens are valid
 	TokenTTL time.Duration
 	// AuthCodeTTL is how long authorization codes are valid
 	AuthCodeTTL time.Duration
+	// AllowedRedirectPatterns defines allowed redirect URI patterns for DCR.
+	// Only localhost URIs are allowed by default (standard for MCP clients).
+	// Patterns: "localhost" matches http://localhost:* and http://127.0.0.1:*
+	AllowedRedirectPatterns []string
 }
 
 // Server is the simplified OAuth server
@@ -81,10 +85,13 @@ type TokenClaims struct {
 // New creates a new simplified OAuth server
 func New(cfg Config) *Server {
 	if cfg.TokenTTL == 0 {
-		cfg.TokenTTL = 24 * time.Hour
+		cfg.TokenTTL = 6 * time.Hour
 	}
 	if cfg.AuthCodeTTL == 0 {
 		cfg.AuthCodeTTL = 10 * time.Minute
+	}
+	if len(cfg.AllowedRedirectPatterns) == 0 {
+		cfg.AllowedRedirectPatterns = []string{"localhost"}
 	}
 	return &Server{
 		config:        cfg,
@@ -135,6 +142,35 @@ func (rl *RateLimiter) Allow(ip string) bool {
 
 	rl.requests[ip] = append(recent, now)
 	return true
+}
+
+// --- Redirect URI Validation ---
+
+// ValidateRedirectURI checks if a redirect URI matches allowed patterns.
+// For MCP clients, only localhost URIs are allowed (http://localhost:PORT or http://127.0.0.1:PORT).
+func (s *Server) ValidateRedirectURI(redirectURI string) error {
+	parsed, err := url.Parse(redirectURI)
+	if err != nil {
+		return fmt.Errorf("invalid redirect_uri: %w", err)
+	}
+
+	for _, pattern := range s.config.AllowedRedirectPatterns {
+		switch pattern {
+		case "localhost":
+			host := parsed.Hostname()
+			if (host == "localhost" || host == "127.0.0.1") &&
+				(parsed.Scheme == "http" || parsed.Scheme == "https") {
+				return nil
+			}
+		default:
+			// Exact domain match
+			if parsed.Hostname() == pattern {
+				return nil
+			}
+		}
+	}
+
+	return fmt.Errorf("redirect_uri not allowed: only localhost URIs are permitted for MCP clients")
 }
 
 // --- Auto Registration ---
@@ -329,17 +365,13 @@ func (s *Server) generateAccessToken(kiteUserID, sessionID string) (string, erro
 	return token.SignedString(s.config.JWTSecret)
 }
 
-// GenerateTestToken creates a JWT token for testing purposes.
-func (s *Server) GenerateTestToken(kiteUserID, sessionID string) (string, error) {
-	return s.generateAccessToken(kiteUserID, sessionID)
-}
-
 // --- Token Validation ---
 
 // ValidateToken validates a JWT access token and returns the claims
 func (s *Server) ValidateToken(tokenString string) (*TokenClaims, error) {
 	token, err := jwt.ParseWithClaims(tokenString, &TokenClaims{}, func(t *jwt.Token) (interface{}, error) {
-		if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
+		// Pin to HS256 only - reject algorithm agility
+		if t.Method.Alg() != jwt.SigningMethodHS256.Alg() {
 			return nil, fmt.Errorf("unexpected signing method: %v", t.Header["alg"])
 		}
 		return s.config.JWTSecret, nil
@@ -371,7 +403,7 @@ func (s *Server) Middleware(next http.Handler) http.Handler {
 		tokenString := strings.TrimPrefix(auth, "Bearer ")
 		claims, err := s.ValidateToken(tokenString)
 		if err != nil {
-			s.writeUnauthorized(w, err.Error())
+			s.writeUnauthorized(w, "invalid or expired token")
 			return
 		}
 

@@ -11,6 +11,7 @@ BINARY_NAME := "kite-mcp.bin"
 GO_FLAGS := "CGO_ENABLED=0"
 TEST_FLAGS := "CGO_ENABLED=0 GOEXPERIMENT=synctest"
 TEST_RACE_FLAGS := "CGO_ENABLED=1 GOEXPERIMENT=synctest"
+TEST_TAGS := "-tags=testing"
 LDFLAGS := "-s -w"
 MAIN_FILE := "main.go"
 
@@ -49,41 +50,33 @@ run-env *ARGS: _check-env-file build
     set +a
     ./{{BINARY_NAME}} {{ARGS}}
 
-# Run in development mode (stdio)
+# Run in development mode (HTTP-only)
 run-dev: build
-    APP_MODE=stdio ./{{BINARY_NAME}}
+    APP_PORT=8080 ./{{BINARY_NAME}}
 
-# Run in HTTP mode
-run-http: build
-    APP_MODE=http ./{{BINARY_NAME}}
-
-# Run in SSE mode
-run-sse: build
-    APP_MODE=sse ./{{BINARY_NAME}}
-
-# Serve documentation (HTTP mode on port 8080)
-docs-serve: build
-    APP_MODE=http APP_PORT=8080 ./{{BINARY_NAME}}
+# Run mock server for local dev/eval (requires -tags=testing)
+run-mock:
+    go run -tags=testing ./cmd/mockserver
 
 # === Test Commands ===
 
 # Run all tests
 test:
-    {{TEST_FLAGS}} go test -v ./...
+    {{TEST_FLAGS}} go test {{TEST_TAGS}} -v ./...
 
 # Run tests with coverage
 test-coverage:
-    {{TEST_FLAGS}} go test -cover -v ./...
+    {{TEST_FLAGS}} go test {{TEST_TAGS}} -cover -v ./...
 
 # Generate HTML coverage report
 coverage:
-    {{TEST_FLAGS}} go test -coverprofile=coverage.out ./...
+    {{TEST_FLAGS}} go test {{TEST_TAGS}} -coverprofile=coverage.out ./...
     go tool cover -html=coverage.out -o coverage.html
     @echo "Coverage report generated at coverage.html"
 
 # Run tests with race detector
 test-race:
-    {{TEST_RACE_FLAGS}} go test -race -v ./...
+    {{TEST_RACE_FLAGS}} go test {{TEST_TAGS}} -race -v ./...
 
 # === Code Quality Commands ===
 

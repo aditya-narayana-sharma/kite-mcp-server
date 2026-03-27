@@ -3,8 +3,8 @@ package oauth
 import (
 	"encoding/json"
 	"log/slog"
+	"net"
 	"net/http"
-	"strings"
 	"time"
 
 	"github.com/zerodha/kite-mcp-server/kc"
@@ -40,7 +40,14 @@ func (h *Handlers) HandleAuthorize(w http.ResponseWriter, r *http.Request) {
 	// Parse the OAuth request
 	req, err := ParseAuthorizeRequest(r)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		http.Error(w, "invalid request", http.StatusBadRequest)
+		return
+	}
+
+	// Validate redirect URI against allowlist before auto-registering
+	if err := h.server.ValidateRedirectURI(req.RedirectURI); err != nil {
+		h.logger.Warn("rejected redirect_uri", "redirect_uri", req.RedirectURI, "error", err)
+		http.Error(w, "invalid request", http.StatusBadRequest)
 		return
 	}
 
@@ -71,8 +78,17 @@ func (h *Handlers) HandleAuthorize(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, kiteLoginURL, http.StatusFound)
 }
 
+// callbackRateLimiter limits /callback requests (30 per IP per minute)
+var callbackRateLimiter = NewRateLimiter(30, time.Minute)
+
 // HandleCallback handles GET /callback from KiteConnect
 func (h *Handlers) HandleCallback(w http.ResponseWriter, r *http.Request) {
+	clientIP := extractClientIP(r)
+	if !callbackRateLimiter.Allow(clientIP) {
+		http.Error(w, "too many requests", http.StatusTooManyRequests)
+		return
+	}
+
 	q := r.URL.Query()
 	requestToken := q.Get("request_token")
 	signedSessionID := q.Get("session_id")
@@ -80,14 +96,16 @@ func (h *Handlers) HandleCallback(w http.ResponseWriter, r *http.Request) {
 	// Verify the signed session ID
 	sessionID, err := h.kcManager.SessionSigner().VerifySessionID(signedSessionID)
 	if err != nil {
-		http.Error(w, "invalid callback session", http.StatusBadRequest)
+		h.logger.Warn("invalid callback session", "error", err)
+		http.Error(w, "authorization failed", http.StatusBadRequest)
 		return
 	}
 
 	// Get the session
 	session, err := h.kcManager.SessionManager().Get(sessionID)
 	if err != nil {
-		http.Error(w, "session not found", http.StatusBadRequest)
+		h.logger.Warn("callback session not found", "session_id", sessionID, "error", err)
+		http.Error(w, "authorization failed", http.StatusBadRequest)
 		return
 	}
 
@@ -95,7 +113,7 @@ func (h *Handlers) HandleCallback(w http.ResponseWriter, r *http.Request) {
 	creds, err := h.kcManager.CompleteLogin(requestToken)
 	if err != nil {
 		h.logger.Error("failed to complete Kite login", "error", err)
-		http.Error(w, "Kite login failed", http.StatusInternalServerError)
+		http.Error(w, "authorization failed", http.StatusInternalServerError)
 		return
 	}
 
@@ -160,18 +178,20 @@ func (h *Handlers) HandleToken(w http.ResponseWriter, r *http.Request) {
 
 	req, err := ParseTokenRequest(r)
 	if err != nil {
+		h.logger.Warn("invalid token request", "error", err)
 		WriteJSON(w, http.StatusBadRequest, map[string]string{
 			"error":             "invalid_request",
-			"error_description": err.Error(),
+			"error_description": "The token request is invalid.",
 		})
 		return
 	}
 
 	accessToken, err := h.server.ExchangeCode(req)
 	if err != nil {
+		h.logger.Warn("token exchange failed", "client_id", req.ClientID, "error", err)
 		WriteJSON(w, http.StatusBadRequest, map[string]string{
 			"error":             "invalid_grant",
-			"error_description": err.Error(),
+			"error_description": "The authorization grant is invalid or expired.",
 		})
 		return
 	}
@@ -213,6 +233,16 @@ type RegisterRequest struct {
 	ClientName   string   `json:"client_name,omitempty"`
 }
 
+// extractClientIP returns the client IP, stripping port from RemoteAddr.
+// Does NOT trust X-Forwarded-For (should be handled at reverse proxy level).
+func extractClientIP(r *http.Request) string {
+	host, _, err := net.SplitHostPort(r.RemoteAddr)
+	if err != nil {
+		return r.RemoteAddr
+	}
+	return host
+}
+
 // HandleRegister handles POST /register (RFC 7591 Dynamic Client Registration)
 func (h *Handlers) HandleRegister(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Access-Control-Allow-Origin", "*")
@@ -229,10 +259,7 @@ func (h *Handlers) HandleRegister(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	clientIP := r.RemoteAddr
-	if fwd := r.Header.Get("X-Forwarded-For"); fwd != "" {
-		clientIP = strings.Split(fwd, ",")[0]
-	}
+	clientIP := extractClientIP(r)
 	if !registerRateLimiter.Allow(clientIP) {
 		WriteJSON(w, http.StatusTooManyRequests, map[string]string{
 			"error":             "rate_limit_exceeded",
@@ -245,7 +272,7 @@ func (h *Handlers) HandleRegister(w http.ResponseWriter, r *http.Request) {
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		WriteJSON(w, http.StatusBadRequest, map[string]string{
 			"error":             "invalid_client_metadata",
-			"error_description": "Invalid JSON: " + err.Error(),
+			"error_description": "Invalid request body.",
 		})
 		return
 	}
@@ -256,6 +283,18 @@ func (h *Handlers) HandleRegister(w http.ResponseWriter, r *http.Request) {
 			"error_description": "redirect_uris is required",
 		})
 		return
+	}
+
+	// Validate all redirect URIs against allowlist
+	for _, uri := range req.RedirectURIs {
+		if err := h.server.ValidateRedirectURI(uri); err != nil {
+			h.logger.Warn("rejected DCR redirect_uri", "redirect_uri", uri, "error", err)
+			WriteJSON(w, http.StatusBadRequest, map[string]string{
+				"error":             "invalid_redirect_uri",
+				"error_description": "Only localhost redirect URIs are allowed for MCP clients.",
+			})
+			return
+		}
 	}
 
 	clientID := generateSecureToken(16)

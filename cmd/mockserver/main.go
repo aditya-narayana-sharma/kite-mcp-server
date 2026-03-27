@@ -1,3 +1,5 @@
+//go:build testing
+
 // mockserver starts a full Kite MCP server backed by kiteconnect-mocks responses.
 // Use this for integration testing, LLM eval, or local development without Kite credentials.
 //

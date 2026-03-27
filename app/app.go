@@ -90,8 +90,8 @@ func (app *App) LoadConfig() error {
 	if app.Config.KiteAPIKey == "" || app.Config.KiteAPISecret == "" {
 		return fmt.Errorf("KITE_API_KEY or KITE_API_SECRET is missing")
 	}
-	if app.Config.JWTSecret == "" {
-		return fmt.Errorf("JWT_SECRET is required (32+ bytes)")
+	if len(app.Config.JWTSecret) < 32 {
+		return fmt.Errorf("JWT_SECRET must be at least 32 bytes (got %d)", len(app.Config.JWTSecret))
 	}
 	// Default OAuth issuer to local URL if not set
 	if app.Config.OAuthIssuer == "" {
@@ -153,7 +153,7 @@ func (app *App) initializeServices() (*mcpsdk.Server, error) {
 	app.oauthServer = oauth.New(oauth.Config{
 		Issuer:    app.Config.OAuthIssuer,
 		JWTSecret: []byte(app.Config.JWTSecret),
-		TokenTTL:  24 * time.Hour,
+		TokenTTL:  6 * time.Hour,
 	})
 	app.jwtOauthHandlers = oauth.NewHandlers(app.oauthServer, app.kcManager, app.logger)
 
@@ -225,6 +225,16 @@ func (app *App) serveHTTPServer(srv *http.Server) {
 	}
 }
 
+// securityHeaders wraps a handler with standard security headers.
+func securityHeaders(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Strict-Transport-Security", "max-age=63072000; includeSubDomains")
+		w.Header().Set("X-Content-Type-Options", "nosniff")
+		w.Header().Set("X-Frame-Options", "DENY")
+		next.ServeHTTP(w, r)
+	})
+}
+
 func (app *App) startServer(srv *http.Server, mcpServer *mcpsdk.Server, url string) error {
 	app.logger.Info("Starting MCP server", "url", "http://"+srv.Addr+"/mcp")
 	streamable := mcpsdk.NewStreamableHTTPHandler(
@@ -236,7 +246,7 @@ func (app *App) startServer(srv *http.Server, mcpServer *mcpsdk.Server, url stri
 	)
 	mux := app.setupMux()
 	mux.Handle("/mcp", app.oauthServer.Middleware(http.HandlerFunc(streamable.ServeHTTP)))
-	srv.Handler = mux
+	srv.Handler = securityHeaders(mux)
 	app.serveHTTPServer(srv)
 	return nil
 }

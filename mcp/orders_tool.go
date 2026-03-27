@@ -97,6 +97,10 @@ var ordersSchema = json.RawMessage(`{
 			"type": "number",
 			"description": "Market protection percentage for MARKET and SL-M orders. 0=disabled, 1-100=custom %, -1=auto"
 		},
+		"autoslice": {
+			"type": "boolean",
+			"description": "Auto-split large orders exceeding freeze quantity limits into smaller child orders (max 50 slices)"
+		},
 		"from": {
 			"type": "number",
 			"description": "Starting index for pagination (0-based). Applies to list and all_trades modes. Default: 0"
@@ -196,6 +200,7 @@ func (*OrdersTool) Handler(manager *kc.Manager) ToolHandler {
 				IcebergQty:        SafeAssertInt(args["iceberg_quantity"], 0),
 				Tag:               SafeAssertString(args["tag"], ""),
 				MarketProtection:  SafeAssertFloat64(args["market_protection"], 0.0),
+				Autoslice:         SafeAssertBool(args["autoslice"], false),
 			}
 			return handler.WithKiteClient(request, "orders_place", func(client *kiteconnect.Client) (*mcp.CallToolResult, error) {
 				resp, err := client.PlaceOrder(variety, orderParams)
@@ -212,13 +217,26 @@ func (*OrdersTool) Handler(manager *kc.Manager) ToolHandler {
 			}
 			variety := SafeAssertString(args["variety"], "regular")
 			orderID := SafeAssertString(args["order_id"], "")
+			// Only include fields explicitly provided by the caller.
+			// gokiteconnect uses omitempty, so zero values are not sent.
+			// This prevents unintended mutations (e.g., quantity defaulting to 1).
 			orderParams := kiteconnect.OrderParams{
-				Quantity:          SafeAssertInt(args["quantity"], 1),
-				Price:             SafeAssertFloat64(args["price"], 0.0),
-				OrderType:         SafeAssertString(args["order_type"], ""),
-				TriggerPrice:      SafeAssertFloat64(args["trigger_price"], 0.0),
-				Validity:          SafeAssertString(args["validity"], ""),
-				DisclosedQuantity: SafeAssertInt(args["disclosed_quantity"], 0),
+				OrderType: SafeAssertString(args["order_type"], ""),
+			}
+			if _, ok := args["quantity"]; ok {
+				orderParams.Quantity = SafeAssertInt(args["quantity"], 0)
+			}
+			if _, ok := args["price"]; ok {
+				orderParams.Price = SafeAssertFloat64(args["price"], 0.0)
+			}
+			if _, ok := args["trigger_price"]; ok {
+				orderParams.TriggerPrice = SafeAssertFloat64(args["trigger_price"], 0.0)
+			}
+			if _, ok := args["validity"]; ok {
+				orderParams.Validity = SafeAssertString(args["validity"], "")
+			}
+			if _, ok := args["disclosed_quantity"]; ok {
+				orderParams.DisclosedQuantity = SafeAssertInt(args["disclosed_quantity"], 0)
 			}
 			return handler.WithKiteClient(request, "orders_modify", func(client *kiteconnect.Client) (*mcp.CallToolResult, error) {
 				resp, err := client.ModifyOrder(variety, orderID, orderParams)

@@ -66,7 +66,7 @@ func TestLoadConfig_MissingJWTSecret(t *testing.T) {
 		t.Error("Expected error when JWT secret is missing")
 	}
 
-	expectedMsg := "JWT_SECRET is required (32+ bytes)"
+	expectedMsg := "JWT_SECRET must be at least 32 bytes (got 0)"
 	if err.Error() != expectedMsg {
 		t.Errorf("Expected error message '%s', got '%s'", expectedMsg, err.Error())
 	}

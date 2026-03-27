@@ -1,3 +1,5 @@
+//go:build testing
+
 package mcp_test
 
 import (
