@@ -3,7 +3,6 @@ package app
 import (
 	"context"
 	"fmt"
-	"html/template"
 	"log/slog"
 	"net/http"
 	"os"
@@ -15,7 +14,6 @@ import (
 	"github.com/zerodha/kite-mcp-server/app/metrics"
 	"github.com/zerodha/kite-mcp-server/kc"
 	"github.com/zerodha/kite-mcp-server/kc/instruments"
-	"github.com/zerodha/kite-mcp-server/kc/templates"
 	"github.com/zerodha/kite-mcp-server/mcp"
 	"github.com/zerodha/kite-mcp-server/oauth"
 	"github.com/zerodha/kite-mcp-server/web"
@@ -29,16 +27,9 @@ type App struct {
 	kcManager        *kc.Manager
 	oauthServer      *oauth.Server
 	jwtOauthHandlers *oauth.Handlers
-	statusTemplate   *template.Template
 	logger           *slog.Logger
 	metrics          *metrics.Manager
 	rateLimiter      *web.RateLimiter
-}
-
-// StatusPageData holds template data for the status page
-type StatusPageData struct {
-	Title   string
-	Version string
 }
 
 // Config holds the application configuration
@@ -157,10 +148,6 @@ func (app *App) initializeServices() (*mcpsdk.Server, error) {
 	})
 	app.jwtOauthHandlers = oauth.NewHandlers(app.oauthServer, app.kcManager, app.logger)
 
-	if err := app.initStatusPageTemplate(); err != nil {
-		app.logger.Warn("Failed to initialize status template", "error", err)
-	}
-
 	app.logger.Info("Static docs site ready (moat-generated)")
 
 	// --- MCP Server & Tools ---
@@ -249,32 +236,4 @@ func (app *App) startServer(srv *http.Server, mcpServer *mcpsdk.Server, url stri
 	srv.Handler = securityHeaders(mux)
 	app.serveHTTPServer(srv)
 	return nil
-}
-
-func (app *App) initStatusPageTemplate() error {
-	tmpl, err := template.ParseFS(templates.FS, "base.html", "status.html")
-	if err != nil {
-		return fmt.Errorf("failed to parse status template: %w", err)
-	}
-	app.statusTemplate = tmpl
-	return nil
-}
-
-func (app *App) getStatusData() StatusPageData {
-	return StatusPageData{Title: "Status", Version: app.Version}
-}
-
-func (app *App) serveStatusPage(w http.ResponseWriter, r *http.Request) {
-	if r.URL.Path != "/" {
-		http.NotFound(w, r)
-		return
-	}
-	if app.statusTemplate == nil {
-		http.Error(w, "Status template not available", http.StatusInternalServerError)
-		return
-	}
-	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	if err := app.statusTemplate.ExecuteTemplate(w, "base", app.getStatusData()); err != nil {
-		app.logger.Error("Failed to execute status template", "error", err)
-	}
 }

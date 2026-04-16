@@ -137,8 +137,6 @@ func TestLoadConfig_Defaults(t *testing.T) {
 	}
 }
 
-
-
 func TestNewApp(t *testing.T) {
 	app := NewApp(testLogger())
 

@@ -32,22 +32,22 @@ func mockKiteServer(t *testing.T) *httptest.Server {
 
 	// Map route patterns to mock response files.
 	routes := map[string]string{
-		"GET /user/profile":              "profile.json",
-		"GET /user/margins":              "margins.json",
-		"GET /user/margins/equity":       "margins_equity.json",
+		"GET /user/profile":               "profile.json",
+		"GET /user/margins":               "margins.json",
+		"GET /user/margins/equity":        "margins_equity.json",
 		"GET /portfolio/holdings":         "holdings.json",
 		"GET /portfolio/holdings/summary": "holdings_summary.json",
 		"GET /portfolio/holdings/compact": "holdings_compact.json",
 		"GET /portfolio/positions":        "positions.json",
 		"GET /orders":                     "orders.json",
 		"GET /trades":                     "trades.json",
-		"GET /gtt/triggers":              "gtt_get_orders.json",
-		"GET /mf/holdings":               "mf_holdings.json",
-		"GET /instruments":               "instruments_all.csv",
+		"GET /gtt/triggers":               "gtt_get_orders.json",
+		"GET /mf/holdings":                "mf_holdings.json",
+		"GET /instruments":                "instruments_all.csv",
 		"POST /orders/regular":            "order_response.json",
 		"PUT /orders/regular/test":        "order_modify.json",
 		"DELETE /orders/regular/test":     "order_cancel.json",
-		"POST /gtt/triggers":             "gtt_place_order.json",
+		"POST /gtt/triggers":              "gtt_place_order.json",
 		"DELETE /gtt/triggers/123":        "gtt_delete_order.json",
 		"GET /alerts":                     "alerts_get.json",
 		"POST /alerts":                    "alerts_create.json",
@@ -79,9 +79,9 @@ func mockKiteServer(t *testing.T) *httptest.Server {
 
 		// Try prefix matches for parameterized routes.
 		prefixRoutes := map[string]string{
-			"GET /orders/":                "order_info.json",
-			"GET /gtt/triggers/":          "gtt_get_order.json",
-			"PUT /gtt/triggers/":          "gtt_modify_order.json",
+			"GET /orders/":                 "order_info.json",
+			"GET /gtt/triggers/":           "gtt_get_order.json",
+			"PUT /gtt/triggers/":           "gtt_modify_order.json",
 			"DELETE /gtt/triggers/":        "gtt_delete_order.json",
 			"GET /instruments/historical/": "historical_minute.json",
 		}
