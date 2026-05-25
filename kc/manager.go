@@ -534,7 +534,7 @@ func (m *Manager) handleCallbackError(w http.ResponseWriter, message string, sta
 // HandleKiteCallback returns an HTTP handler for Kite authentication callbacks
 func (m *Manager) HandleKiteCallback() func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
-		m.Logger.Info("Received Kite callback request", "url", r.URL.String())
+		m.Logger.Info("Received Kite callback request", "url", r.URL.String(), "query", r.URL.RawQuery)
 		requestToken, mcpSessionID, err := m.extractCallbackParams(r)
 		if err != nil {
 			m.handleCallbackError(w, missingParamsMessage, http.StatusBadRequest, "Invalid callback parameters", "error", err)
@@ -566,8 +566,29 @@ func (m *Manager) extractCallbackParams(r *http.Request) (kiteRequestToken, mcpS
 	kiteRequestToken = qVals.Get("request_token")
 	signedSessionID := qVals.Get("session_id")
 
+	// Some Kite redirect flows return redirect_params as a single encoded blob.
+	if signedSessionID == "" {
+		if redirectParams := qVals.Get("redirect_params"); redirectParams != "" {
+			if decoded, decodeErr := url.QueryUnescape(redirectParams); decodeErr == nil {
+				redirectParams = decoded
+			}
+			if verifiedID, verifyErr := m.sessionSigner.VerifyRedirectParams(redirectParams); verifyErr == nil {
+				mcpSessionID = verifiedID
+				if kiteRequestToken != "" {
+					return kiteRequestToken, mcpSessionID, nil
+				}
+			}
+		}
+	}
+
 	if signedSessionID == "" || kiteRequestToken == "" {
-		return "", "", errors.New("missing required parameters (MCP session_id or Kite request_token)")
+		if kiteRequestToken == "" && signedSessionID == "" {
+			return "", "", errors.New("missing required parameters (MCP session_id or Kite request_token)")
+		}
+		if kiteRequestToken == "" {
+			return "", "", errors.New("missing Kite request_token — complete login via the link from Claude's login tool")
+		}
+		return "", "", errors.New("missing MCP session_id — use a fresh login link from Claude (do not use get_token.py)")
 	}
 
 	// Verify the signed session ID

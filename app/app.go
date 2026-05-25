@@ -389,6 +389,12 @@ func (app *App) serveStatusPage(mux *http.ServeMux) {
 			return
 		}
 
+		// Kite OAuth may redirect to the registered root URL (http://localhost:8080) instead of /callback.
+		if r.URL.Query().Get("request_token") != "" && app.kcManager != nil {
+			app.kcManager.HandleKiteCallback()(w, r)
+			return
+		}
+
 		// Serve status page with template data
 		if app.statusTemplate == nil {
 			// Fallback to simple text if template failed to load

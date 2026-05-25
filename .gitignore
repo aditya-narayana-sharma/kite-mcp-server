@@ -26,6 +26,7 @@ go.sum.backup
 *.tmp
 *.temp
 *.log
+.logs/
 *.pid
 *.lock
 
